@@ -1,0 +1,28 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Secrets and configuration
+.env
+.env.*
+!.env.example
+
+# Local storage and database states
+backend/data/
+db/
+*.png
+*.jpg
+*.jpeg
+
+# Python cache & tests
+__pycache__/
+*.pyc
+.pytest_cache/
+

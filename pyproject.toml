@@ -1,0 +1,18 @@
+[project]
+name = "wardrobe-assistant"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "sqlmodel",
+    "psycopg2-binary",
+    "pgvector",
+    "litellm",
+    "google-generativeai",
+    "rembg",
+    "open-clip-torch",
+    "pywebview"
+]
