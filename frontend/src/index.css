@@ -1,0 +1,99 @@
+/* Core editorial typography and resets */
+:root {
+  font-family: 'Outfit', sans-serif;
+  line-height: 1.6;
+  font-weight: 400;
+
+  /* High-fashion Warm Editorial Color Palette */
+  --bg-cream: #FAF8F5;       /* Warm luxurious linen cream */
+  --bg-graphite: #151413;    /* Rich, warm charcoal/espresso black */
+  
+  --panel-cream: #F4EFEA;    /* Soft luxury panel base */
+  --panel-graphite: #211F1D; /* Elevated dark card base */
+  
+  --text-dark: #1E1C1A;      /* Elegant soft espresso dark text */
+  --text-light: #F4EFEA;     /* Soft ivory light text */
+
+  --amber-primary: #C58A3E;  /* Luxurious antique amber gold */
+  --amber-glow: rgba(197, 138, 62, 0.15);
+  
+  --transition-smooth: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  background-color: var(--bg-cream);
+  color: var(--text-dark);
+  transition: var(--transition-smooth);
+}
+
+[data-mantine-color-scheme='dark'] body {
+  background-color: var(--bg-graphite);
+  color: var(--text-light);
+}
+
+/* Premium Typography classes */
+.editorial-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  letter-spacing: -0.01em;
+}
+
+.editorial-header {
+  font-family: 'Cormorant Garamond', serif;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+/* Modern Bento Grid widgets */
+.bento-card {
+  transition: var(--transition-smooth);
+  background-color: #ffffff;
+  border: 1px solid rgba(220, 215, 206, 0.6) !important;
+  box-shadow: 0 4px 20px -2px rgba(30, 28, 26, 0.03) !important;
+}
+
+[data-mantine-color-scheme='dark'] .bento-card {
+  background-color: var(--panel-graphite);
+  border: 1px solid rgba(60, 56, 52, 0.5) !important;
+  box-shadow: 0 4px 25px -4px rgba(0, 0, 0, 0.3) !important;
+}
+
+.bento-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 30px -4px rgba(197, 138, 62, 0.08) !important;
+  border-color: rgba(197, 138, 62, 0.4) !important;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(197, 138, 62, 0.25);
+  border-radius: 99px;
+  border: 2px solid transparent;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(197, 138, 62, 0.45);
+}
+
+/* Photo mix blend mode for transparent assets */
+.isolated-cutout {
+  mix-blend-mode: multiply;
+  transition: var(--transition-smooth);
+}
+
+[data-mantine-color-scheme='dark'] .isolated-cutout {
+  mix-blend-mode: normal;
+  filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.08));
+}
