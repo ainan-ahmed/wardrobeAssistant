@@ -12,13 +12,6 @@ export const ClosetItemCard: React.FC<ClosetItemCardProps> = ({ item, onDelete }
     <Card 
       p="md" 
       radius="md" 
-      style={{ 
-        position: 'relative', 
-        overflow: 'visible',
-        border: '1px solid rgba(220, 215, 206, 0.4)',
-        backgroundColor: 'rgba(255, 255, 255, 0.3)',
-        transition: 'var(--transition-smooth)',
-      }}
       className="closet-item-card"
     >
       

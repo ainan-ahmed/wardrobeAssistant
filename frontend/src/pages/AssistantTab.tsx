@@ -49,13 +49,7 @@ export const AssistantTab: React.FC = () => {
       withBorder
       radius="md"
       p={0}
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: 'calc(100vh - 275px)',
-        minHeight: 350,
-        background: 'var(--mantine-color-body)',
-      }}
+      className="stylist-chat-card"
     >
       {/* Messages area */}
       <ScrollArea flex={1} p="md" viewportRef={viewport}>

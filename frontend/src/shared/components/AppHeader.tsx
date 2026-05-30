@@ -8,11 +8,7 @@ export const AppHeader: React.FC = () => {
     <Flex 
       justify="space-between" 
       align="flex-end" 
-      mb={45} 
-      style={{ 
-        borderBottom: '1px solid rgba(197, 138, 62, 0.15)', 
-        paddingBottom: rem(25) 
-      }}
+      className="app-header-container"
     >
       <div>
         <Title order={1} className="editorial-title" style={{ fontSize: rem(42), fontWeight: 300, lineHeight: 1 }}>

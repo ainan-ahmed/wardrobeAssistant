@@ -127,3 +127,52 @@ body {
   box-shadow: 0 0 0 1px var(--amber-primary) !important;
 }
 
+/* App Header Container styling */
+.app-header-container {
+  border-bottom: 1px solid rgba(197, 138, 62, 0.15);
+  padding-bottom: 25px;
+  margin-bottom: 40px;
+  transition: var(--transition-smooth);
+}
+
+/* Elegant Closet Item Card */
+.closet-item-card {
+  position: relative;
+  overflow: visible;
+  border: 1px solid rgba(220, 215, 206, 0.4) !important;
+  background-color: rgba(255, 255, 255, 0.3) !important;
+  transition: var(--transition-smooth);
+}
+
+[data-mantine-color-scheme='dark'] .closet-item-card {
+  border: 1px solid rgba(60, 56, 52, 0.4) !important;
+  background-color: rgba(33, 31, 29, 0.4) !important;
+}
+
+/* Stat Tile in Closet Dashboard */
+.closet-stat-tile {
+  background-color: var(--amber-glow);
+  border: 1px solid rgba(197, 138, 62, 0.12);
+  transition: var(--transition-smooth);
+}
+
+[data-mantine-color-scheme='dark'] .closet-stat-tile {
+  background-color: rgba(197, 138, 62, 0.05);
+  border: 1px solid rgba(197, 138, 62, 0.08);
+}
+
+/* Stylist Chat Container */
+.stylist-chat-card {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 275px);
+  min-height: 350px;
+  background-color: #ffffff !important;
+  transition: var(--transition-smooth);
+}
+
+[data-mantine-color-scheme='dark'] .stylist-chat-card {
+  background-color: var(--panel-graphite) !important;
+}
+
+

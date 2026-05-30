@@ -220,7 +220,7 @@ const StatTile: React.FC<{ label: string; value: number | string }> = ({ label, 
   <Paper
     p="md"
     radius="md"
-    style={{ backgroundColor: 'var(--amber-glow)', border: '1px solid rgba(197, 138, 62, 0.1)' }}
+    className="closet-stat-tile"
   >
     <Text size="xs" c="dimmed" fw={500}>{label}</Text>
     <Text size="xl" fw={700} c="amber" mt={2}>{value}</Text>
