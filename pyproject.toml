@@ -12,7 +12,8 @@ dependencies = [
     "pgvector",
     "litellm",
     "google-generativeai",
-    "rembg",
+    "rembg[cpu]",
     "open-clip-torch",
-    "pywebview"
+    "pywebview[gtk]",
+    "python-multipart",
 ]
