@@ -208,5 +208,65 @@ body {
   box-shadow: 0 2px 12px -4px rgba(0, 0, 0, 0.2) !important;
 }
 
+/* Elegant Theme-Adaptive TextInput (Filled variant companion) */
+.elegant-text-input {
+  border: 1px solid rgba(197, 138, 62, 0.15) !important;
+  background-color: rgba(255, 255, 255, 0.6) !important;
+  color: var(--text-dark) !important;
+  transition: var(--transition-smooth);
+}
+
+[data-mantine-color-scheme='dark'] .elegant-text-input {
+  border: 1px solid rgba(197, 138, 62, 0.1) !important;
+  background-color: rgba(21, 20, 19, 0.4) !important;
+  color: var(--text-light) !important;
+}
+
+.elegant-text-input:focus {
+  border-color: var(--amber-primary) !important;
+}
+
+/* Elegant Dynamic Dropzone Uploader */
+.elegant-dropzone {
+  border: 1px dashed var(--amber-primary) !important;
+  background-color: var(--amber-glow) !important;
+  transition: var(--transition-smooth) !important;
+}
+
+.elegant-dropzone:hover {
+  background-color: rgba(197, 138, 62, 0.08) !important;
+  transform: scale(1.008);
+}
+
+[data-mantine-color-scheme='dark'] .elegant-dropzone {
+  background-color: rgba(197, 138, 62, 0.03) !important;
+  border: 1px dashed rgba(197, 138, 62, 0.6) !important;
+}
+
+[data-mantine-color-scheme='dark'] .elegant-dropzone:hover {
+  background-color: rgba(197, 138, 62, 0.06) !important;
+}
+
+/* Elegant Boutique Tag Pills */
+.elegant-inventory-pill {
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 6px 14px !important;
+  height: auto !important;
+  border: 1px solid rgba(197, 138, 62, 0.25) !important;
+  transition: var(--transition-smooth);
+}
+
+.elegant-inventory-pill:hover {
+  border-color: var(--amber-primary) !important;
+  background-color: var(--amber-glow) !important;
+}
+
+[data-mantine-color-scheme='dark'] .elegant-inventory-pill {
+  border: 1px solid rgba(197, 138, 62, 0.15) !important;
+}
+
+
 
 

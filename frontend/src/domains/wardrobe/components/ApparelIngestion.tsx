@@ -30,16 +30,7 @@ export const ApparelIngestion: React.FC<ApparelIngestionProps> = ({ onUpload, lo
         onChange={(event) => setBrand(event.currentTarget.value)}
         mb="md"
         variant="filled"
-        styles={{
-          input: {
-            border: '1px solid rgba(197, 138, 62, 0.15)',
-            backgroundColor: 'rgba(255, 255, 255, 0.4)',
-            transition: 'var(--transition-smooth)',
-            '&:focus': {
-              borderColor: 'var(--amber-primary)'
-            }
-          }
-        }}
+        classNames={{ input: 'elegant-text-input' }}
       />
       
       <Dropzone
@@ -48,17 +39,7 @@ export const ApparelIngestion: React.FC<ApparelIngestionProps> = ({ onUpload, lo
         accept={IMAGE_MIME_TYPE}
         loading={loading}
         radius="md"
-        styles={{
-          root: {
-            border: '1px dashed var(--amber-primary)',
-            backgroundColor: 'var(--amber-glow)',
-            transition: 'var(--transition-smooth)',
-            '&:hover': {
-              backgroundColor: 'rgba(197, 138, 62, 0.08)',
-              transform: 'scale(1.01)'
-            }
-          }
-        }}
+        classNames={{ root: 'elegant-dropzone' }}
       >
         <Flex justify="center" align="center" direction="column" gap="xs" mih={140} style={{ pointerEvents: 'none', textAlign: 'center' }}>
           <Dropzone.Accept>

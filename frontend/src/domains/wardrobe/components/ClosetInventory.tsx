@@ -47,14 +47,9 @@ export const ClosetInventory: React.FC<ClosetInventoryProps> = ({
             variant={activeCategory === cat ? 'filled' : 'outline'}
             color="amber"
             radius="99px"
+            className="elegant-inventory-pill"
             style={{
-              cursor: 'pointer',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              padding: `${rem(6)} ${rem(14)}`,
-              height: 'auto',
-              border: activeCategory === cat ? 'none' : '1px solid rgba(197, 138, 62, 0.4)',
-              transition: 'var(--transition-smooth)'
+              border: activeCategory === cat ? 'none' : undefined
             }}
           >
             {cat}
