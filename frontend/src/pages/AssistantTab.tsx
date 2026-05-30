@@ -73,17 +73,9 @@ export const AssistantTab: React.FC = () => {
                 {msg.role === 'user' ? <IconUser size={14} /> : <IconSparkles size={14} />}
               </ThemeIcon>
               <Box
-                style={{
-                  maxWidth: '70%',
-                  padding: 'var(--mantine-spacing-sm) var(--mantine-spacing-md)',
-                  borderRadius: 'var(--mantine-radius-md)',
-                  background:
-                    msg.role === 'user'
-                      ? 'var(--mantine-color-amber-1)'
-                      : 'var(--mantine-color-default-border)',
-                }}
+                className={msg.role === 'user' ? 'chat-bubble-user' : 'chat-bubble-assistant'}
               >
-                <Text size="sm" style={{ whiteSpace: 'pre-wrap' }}>
+                <Text style={{ whiteSpace: 'pre-wrap' }}>
                   {msg.content}
                 </Text>
               </Box>
