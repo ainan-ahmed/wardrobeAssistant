@@ -52,8 +52,8 @@ export const AssistantTab: React.FC = () => {
       style={{
         display: 'flex',
         flexDirection: 'column',
-        height: 'calc(100vh - 200px)',
-        minHeight: 400,
+        height: 'calc(100vh - 275px)',
+        minHeight: 350,
         background: 'var(--mantine-color-body)',
       }}
     >
