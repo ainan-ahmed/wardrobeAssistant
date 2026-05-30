@@ -4,7 +4,6 @@ import {
   ThemeIcon, Loader,
 } from '@mantine/core';
 import { IconSend, IconSparkles, IconUser } from '@tabler/icons-react';
-import axios from 'axios';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -32,12 +31,73 @@ export const AssistantTab: React.FC = () => {
     setLoading(true);
 
     try {
-      const res = await axios.post<{ reply: string }>('/api/chat/message', { message: text });
-      setMessages((prev) => [...prev, { role: 'assistant', content: res.data.reply }]);
-    } catch {
+      const history = messages.slice(1).concat({ role: 'user', content: text });
+      
+      const response = await fetch('/api/chat/stream', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message: text, history }),
+      });
+
+      if (!response.ok || !response.body) {
+        throw new Error('Network response was not ok');
+      }
+
+      setLoading(false); // Stop loader once chunks begin streaming
+      
+      // Append initial blank assistant message to stream into
+      setMessages((prev) => [...prev, { role: 'assistant', content: '' }]);
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let done = false;
+      let accumulatedResponse = '';
+      let buffer = '';
+
+      while (!done) {
+        const { value, done: readerDone } = await reader.read();
+        done = readerDone;
+        if (value) {
+          buffer += decoder.decode(value, { stream: !done });
+          const lines = buffer.split('\n');
+          // Save the last element (potential partial line segment) back into the buffer
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed.startsWith('data: ')) {
+              const dataStr = trimmed.slice(6);
+              try {
+                const data = JSON.parse(dataStr);
+                if (data.chunk) {
+                  accumulatedResponse += data.chunk;
+                  setMessages((prev) => {
+                    const next = [...prev];
+                    if (next.length > 0) {
+                      next[next.length - 1] = {
+                        role: 'assistant',
+                        content: accumulatedResponse,
+                      };
+                    }
+                    return next;
+                  });
+                } else if (data.error) {
+                  console.error('Stylist stream error:', data.error);
+                }
+              } catch (e) {
+                console.error('Failed to parse SSE JSON line:', e, line);
+              }
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Streaming request failed:', err);
       setMessages((prev) => [
         ...prev,
-        { role: 'assistant', content: 'Sorry, I couldn\'t process that. The chat backend may not be running yet.' },
+        { role: 'assistant', content: 'Sorry, I couldn\'t process that. The streaming chat backend might not be running yet.' },
       ]);
     } finally {
       setLoading(false);

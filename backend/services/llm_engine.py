@@ -1,10 +1,14 @@
-import os
-import json
+"""
+LLM Engine — CLIP-specific vector search utilities.
+
+This module handles text-to-vector encoding using the local Marqo-FashionSigLIP
+model for semantic wardrobe searches. Chat completion logic has been moved to
+backend/services/agents.py (PydanticAI).
+"""
 import logging
-from typing import List, Dict, Any, AsyncGenerator
+from typing import List, Dict, Any
 import open_clip
 import torch
-import litellm
 
 # DB and Models
 from sqlmodel import Session, select
@@ -56,7 +60,6 @@ def retrieve_wardrobe_context(user_query: str, db_session: Session, limit: int =
         query_vector = generate_text_embedding(user_query)
         
         # 2. Query PostgreSQL sorted by pgvector's cosine distance operator
-        # In SQLModel/SQLAlchemy, pgvector provides the .cosine_distance() helper on vector columns
         statement = (
             select(WardrobeItem)
             .where(WardrobeItem.is_active == True)
@@ -84,147 +87,3 @@ def retrieve_wardrobe_context(user_query: str, db_session: Session, limit: int =
     except Exception as e:
         logger.error(f"Error retrieving wardrobe context: {str(e)}")
         return []
-
-def retrieve_all_wardrobe_text(db_session: Session) -> List[Dict[str, Any]]:
-    """Retrieve active wardrobe item descriptions for conversational LLM context without running CLIP."""
-    logger.info("Retrieving wardrobe text metadata directly from DB (no CLIP text encoding)")
-    try:
-        statement = select(WardrobeItem).where(WardrobeItem.is_active == True)
-        results = db_session.exec(statement).all()
-        formatted_items = []
-        for item in results:
-            formatted_items.append({
-                "id": str(item.id),
-                "category": item.category,
-                "subcategory": item.subcategory,
-                "brand": item.brand or "Unknown",
-                "colors": item.colors,
-                "style_tags": item.style_tags,
-                "ai_description": item.ai_description or ""
-            })
-        return formatted_items
-    except Exception as e:
-        logger.error(f"Error retrieving text metadata: {str(e)}")
-        return []
-
-async def handle_chat_stream(
-    user_message: str,
-    conversation_history: List[Dict[str, str]],
-    db_session: Session
-) -> AsyncGenerator[str, None]:
-    """
-    RAG Styling Stream:
-    1. Retrieves clothing context text metadata (no CLIP text encoding).
-    2. Builds the lightweight, token-optimized system instruction prompt.
-    3. Calls Gemini via litellm with SSE streaming enabled.
-    """
-    logger.info("Initializing chat stream completion pipeline (Gemini without CLIP)...")
-    
-    # Check for API key
-    if not os.getenv("GEMINI_API_KEY"):
-        yield "Error: GEMINI_API_KEY is not configured in the environment (.env) file."
-        return
-        
-    try:
-        # Step 1: Retrieve active wardrobe text context
-        items_context = retrieve_all_wardrobe_text(db_session)
-        json_context = json.dumps(items_context, indent=2)
-        
-        # Step 2: Build the token-optimized system prompt
-        system_instruction = (
-            "You are \"Aura\", a professional and encouraging personal wardrobe stylist.\n\n"
-            "- **Inventory Rule:** Suggest outfits using only the provided closet inventory JSON. Acknowledge alternatives gracefully if requested items are missing.\n"
-            "- **UI Render Rule:** Whenever you mention or recommend an item from the closet, you MUST reference it using this exact tag format: `[item:<UUID>]` (e.g. \"Pair your [item:UUID] (Levi's Jeans) with...\"). The UI intercepts this to render interactive clothing cards.\n"
-            "- **Style Guidelines:** Keep advice concise. Give a quick \"why\" for your choices (color theory or silhouette balance).\n"
-            "- **Format:** Use clear bullet points for outfit breakdowns and bold headers for options.\n\n"
-            f"[USER CLOSET INVENTORY FOR THIS QUERY]:\n{json_context}"
-        )
-        
-        # Step 3: Prepare message payload for LiteLLM
-        messages = [{"role": "system", "content": system_instruction}]
-        
-        # Add conversation history
-        for msg in conversation_history:
-            messages.append({
-                "role": msg.get("role", "user"),
-                "content": msg.get("content", "")
-            })
-            
-        # Add final user message
-        messages.append({"role": "user", "content": user_message})
-        
-        # Step 4: Stream completions from Gemini via LiteLLM
-        logger.info("Requesting streaming completion from gemini-2.5-flash...")
-        response = await litellm.acompletion(
-            model="gemini/gemini-2.5-flash",
-            messages=messages,
-            stream=True
-        )
-        
-        # Step 5: Yield text chunks for Server-Sent Events (SSE)
-        async for chunk in response:
-            content = chunk.choices[0].delta.content
-            if content:
-                yield content
-                
-    except Exception as e:
-        logger.error(f"Error in handle_chat_stream: {str(e)}")
-        yield f"\n[Stylist Connection Error: {str(e)}]"
-
-async def handle_chat_completion(
-    user_message: str,
-    conversation_history: List[Dict[str, str]],
-    db_session: Session
-) -> str:
-    """
-    RAG Styling Completion:
-    1. Retrieves all clothing context via database text metadata (no CLIP text embedding).
-    2. Builds the lightweight, token-optimized system instruction prompt.
-    3. Calls Gemini via litellm and returns the full generated text response.
-    """
-    logger.info("Initializing chat completion pipeline (Gemini without CLIP)...")
-    
-    # Check for API key
-    if not os.getenv("GEMINI_API_KEY"):
-        return "Error: GEMINI_API_KEY is not configured in the environment (.env) file."
-        
-    try:
-        # Step 1: Retrieve active wardrobe text context
-        items_context = retrieve_all_wardrobe_text(db_session)
-        json_context = json.dumps(items_context, indent=2)
-        
-        # Step 2: Build the token-optimized system prompt
-        system_instruction = (
-            "You are \"Aura\", a professional and encouraging personal wardrobe stylist.\n\n"
-            "- **Inventory Rule:** Suggest outfits using only the provided closet inventory JSON. Acknowledge alternatives gracefully if requested items are missing.\n"
-            "- **UI Render Rule:** Whenever you mention or recommend an item from the closet, you MUST reference it using this exact tag format: `[item:<UUID>]` (e.g. \"Pair your [item:UUID] (Levi's Jeans) with...\").\n"
-            "- **Style Guidelines:** Keep advice concise. Give a quick \"why\" for your choices (color theory or silhouette balance).\n"
-            "- **Format:** Use clear bullet points for outfit breakdowns and bold headers for options.\n\n"
-            f"[USER CLOSET INVENTORY FOR THIS QUERY]:\n{json_context}"
-        )
-        
-        # Step 3: Prepare message payload for LiteLLM
-        messages = [{"role": "system", "content": system_instruction}]
-        
-        # Add conversation history
-        for msg in conversation_history:
-            messages.append({
-                "role": msg.get("role", "user"),
-                "content": msg.get("content", "")
-            })
-            
-        # Add final user message
-        messages.append({"role": "user", "content": user_message})
-        
-        # Step 4: Call Gemini via LiteLLM
-        logger.info("Requesting completion from gemini-2.5-flash...")
-        response = await litellm.acompletion(
-            model="gemini/gemini-2.5-flash",
-            messages=messages
-        )
-        
-        return response.choices[0].message.content or ""
-        
-    except Exception as e:
-        logger.error(f"Error in handle_chat_completion: {str(e)}")
-        return f"\n[Stylist Connection Error: {str(e)}]"

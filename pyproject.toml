@@ -10,10 +10,10 @@ dependencies = [
     "sqlmodel",
     "psycopg2-binary",
     "pgvector",
-    "litellm",
-    "google-generativeai",
+    "pydantic-ai-slim[google]",
     "rembg[cpu]",
     "open-clip-torch",
     "pywebview[gtk]",
     "python-multipart",
+    "python-dotenv",
 ]

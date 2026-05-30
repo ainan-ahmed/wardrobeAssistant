@@ -64,3 +64,20 @@ class ChatMessage(SQLModel, table=True):
     role: str = Field(nullable=False) # "user" or "assistant"
     content: str = Field(nullable=False)
     timestamp: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+
+class UserStyleProfile(SQLModel, table=True):
+    """Long-term semantic memory: stores distilled style preferences extracted from conversations."""
+    __tablename__ = "user_style_profile"
+
+    id: uuid.UUID = Field(
+        default_factory=uuid.uuid4,
+        primary_key=True,
+        index=True,
+        nullable=False
+    )
+    preferred_colors: List[str] = Field(default=[], sa_column=Column(JSON))
+    preferred_styles: List[str] = Field(default=[], sa_column=Column(JSON))
+    disliked_elements: List[str] = Field(default=[], sa_column=Column(JSON))
+    fit_preferences: Optional[str] = Field(default=None)
+    custom_notes: Optional[str] = Field(default=None)
+    updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)

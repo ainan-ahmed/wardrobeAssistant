@@ -1,14 +1,14 @@
 import json
 import logging
 import uuid
-from typing import List, Optional
+from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlmodel import Session, select
 
 from backend.database import get_session
 from backend.models import Outfit, WardrobeItem
 from backend.services.llm_engine import retrieve_wardrobe_context
-import litellm
+from backend.services.agents import outfit_agent, WardrobeDeps
 
 logger = logging.getLogger("outfits_router")
 router = APIRouter(prefix="/api/outfits", tags=["outfits"])
@@ -19,8 +19,9 @@ async def suggest_outfit(
     db: Session = Depends(get_session)
 ):
     """
-    Accepts criteria (occasion, weather, style) and triggers Gemini to select 3-5 matching
-    items from your closet database to compile a fully coordinated outfit.
+    Accepts criteria (occasion, weather, style) and triggers the PydanticAI outfit
+    coordinator agent to select 3-5 matching items from the closet database.
+    Returns a guaranteed-structured OutfitRecommendation.
     """
     occasion = payload.get("occasion", "casual")
     weather = payload.get("weather", "mild")
@@ -38,45 +39,26 @@ async def suggest_outfit(
             detail="Your wardrobe is empty! Please upload clothing items first before requesting recommendations."
         )
         
-    # 2. Query Gemini to select and coordinate a look from the retrieved items
+    # 2. Query the PydanticAI outfit agent for a structured recommendation
     try:
         prompt = (
             "You are a professional fashion editor. Co-ordinate one stylish, cohesive outfit by selecting "
             "between 2 to 5 items from the provided list of closet items. Do not invent any items.\n\n"
             "Here is the list of available closet items:\n"
             f"{json.dumps(matching_items, indent=2)}\n\n"
-            "Formulate the response as a valid, single JSON object matching these keys:\n"
-            "{\n"
-            '  "name": "A creative, stylish name for this outfit combination, e.g. Autumn Charcoal layers",\n'
-            '  "item_ids": ["List of strings representing the UUIDs of the selected items"],\n'
-            '  "ai_rationale": "A brief two-sentence styling explanation of why these items coordinate perfectly for the event and weather."\n'
-            "}\n"
-            "Provide ONLY the raw JSON object. Do not include markdown code block syntax."
+            f"Occasion: {occasion}\nWeather: {weather}\nVibe: {style}\n"
         )
         
-        response = litellm.completion(
-            model="gemini/gemini-2.5-flash",
-            messages=[{"role": "user", "content": prompt}],
-            response_format={"type": "json_object"}
-        )
+        result = await outfit_agent.run(prompt, deps=WardrobeDeps(db=db))
+        recommendation = result.output
         
-        content = response.choices[0].message.content.strip()
-        logger.info(f"Raw Gemini Outfit recommendation: {content}")
-        
-        parsed_outfit = json.loads(content)
-        
-        # 3. Verify selected items are valid
-        selected_ids = parsed_outfit.get("item_ids", [])
-        if not selected_ids:
-            raise Exception("No items were selected by the model.")
-            
-        # 4. Save and return the Outfit record
+        # 3. Save and return the Outfit record
         new_outfit = Outfit(
             id=uuid.uuid4(),
-            name=parsed_outfit.get("name", f"Stylist Choice: {occasion}"),
-            item_ids=[str(i) for i in selected_ids],
+            name=recommendation.name,
+            item_ids=[str(i) for i in recommendation.item_ids],
             occasion=occasion,
-            ai_rationale=parsed_outfit.get("ai_rationale", "Co-ordinated by Aura."),
+            ai_rationale=recommendation.ai_rationale,
         )
         
         db.add(new_outfit)
@@ -86,15 +68,15 @@ async def suggest_outfit(
         return new_outfit
         
     except Exception as e:
-        logger.error(f"Failed to generate outfit recommendation: {str(e)}")
-        # Provide a simple local heuristic fallback if LLM or API fails
+        logger.error(f"Failed to generate outfit recommendation: {e}")
+        # Provide a simple local heuristic fallback if agent or API fails
         selected_ids = [item["id"] for item in matching_items[:2]]
         new_outfit = Outfit(
             id=uuid.uuid4(),
             name=f"Standard Outfit ({occasion})",
             item_ids=selected_ids,
             occasion=occasion,
-            ai_rationale=f"Failed to call AI: {str(e)}. Compiled simple fallback look with top inventory matches.",
+            ai_rationale=f"Failed to call AI: {e}. Compiled simple fallback look with top inventory matches.",
         )
         db.add(new_outfit)
         db.commit()
@@ -125,7 +107,7 @@ async def log_outfit_worn(outfit_id: uuid.UUID, db: Session = Depends(get_sessio
                 db.add(item)
                 updated_items.append(str(item.id))
         except Exception as e:
-            logger.warning(f"Invalid UUID '{item_id_str}' stored in Outfit {outfit_id}: {str(e)}")
+            logger.warning(f"Invalid UUID '{item_id_str}' stored in Outfit {outfit_id}: {e}")
             
     db.commit()
     return {"message": "Outfit wear registered successfully.", "worn_items": updated_items}

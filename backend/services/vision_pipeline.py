@@ -8,7 +8,6 @@ from PIL import Image
 
 # Third-party libraries
 from rembg import remove, new_session
-import litellm
 import open_clip
 import torch
 
@@ -111,7 +110,7 @@ def encode_image_base64(image_path: str) -> str:
         return base64.b64encode(image_file.read()).decode("utf-8")
 
 def extract_metadata(image_path: str) -> Dict[str, Any]:
-    """Query Gemini to parse the apparel item and extract detailed metadata as structured JSON."""
+    """Query Gemini via PydanticAI vision agent to parse the apparel item and extract structured metadata."""
     logger.info(f"Extracting AI metadata for image: {image_path}")
     
     # Check if Gemini API key exists
@@ -126,50 +125,31 @@ def extract_metadata(image_path: str) -> Dict[str, Any]:
         }
         
     try:
-        # Encode background-removed image to base64
-        base64_image = encode_image_base64(image_path)
+        from pydantic_ai.messages import BinaryContent
+        from backend.services.agents import vision_agent
         
-        # Define strict structural instructions
+        # Read image bytes for multimodal input
+        with open(image_path, "rb") as f:
+            image_bytes = f.read()
+        
         prompt = (
             "You are a professional fashion database cataloger. Analyze this clothing image "
-            "(which has had its background removed) and return a detailed, structured JSON "
-            "object exactly matching the following keys:\n"
-            "{\n"
-            '  "category": "tops" | "bottoms" | "shoes" | "outerwear" | "accessories" | "other",\n'
-            '  "subcategory": "t-shirt" | "sweater" | "jeans" | "shorts" | "sneakers" | "boots" | "jacket" | "coat" | etc,\n'
-            '  "colors": ["list of principal colors, e.g. Black, Navy Blue, Crimson"],\n'
-            '  "style_tags": ["list of 3-5 style descriptors, e.g. streetwear, minimalist, casual, formal, rugged"],\n'
-            '  "ai_description": "a concise one-sentence description of the clothing item\'s appearance, details, and texture"\n'
-            "}\n"
-            "Provide ONLY the raw JSON object. Do not include markdown code block syntax (like ```json)."
+            "(which has had its background removed) and extract detailed metadata."
         )
         
-        # Make LLM completion call via LiteLLM
-        response = litellm.completion(
-            model="gemini/gemini-2.5-flash",
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": prompt},
-                        {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": f"data:image/png;base64,{base64_image}"
-                            }
-                        }
-                    ]
-                }
-            ],
-            response_format={"type": "json_object"}
+        # Call PydanticAI vision agent synchronously (this runs in a background thread)
+        result = vision_agent.run_sync(
+            [
+                prompt,
+                BinaryContent(data=image_bytes, media_type="image/png"),
+            ]
         )
         
-        # Extract and parse response content
-        content = response.choices[0].message.content.strip()
-        logger.info(f"Raw Gemini Response: {content}")
+        metadata = result.output
+        logger.info(f"Vision agent extracted: {metadata}")
         
-        parsed_metadata = json.loads(content)
-        return parsed_metadata
+        # Convert the Pydantic model to a dict matching the existing pipeline contract
+        return metadata.model_dump()
         
     except Exception as e:
         logger.error(f"Error in Gemini metadata extraction: {str(e)}")

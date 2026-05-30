@@ -1,13 +1,14 @@
 import sys
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, AsyncMock, patch
 
 # --- MOCKING ML MODULES BEFORE IMPORTING ROUTERS ---
-# This prevents Starlette / Rembg / OpenCLIP / Torch import issues in dry environments
+# This prevents Starlette / Rembg / OpenCLIP / Torch / dotenv import issues in dry environments
+mock_dotenv = MagicMock()
+sys.modules['dotenv'] = mock_dotenv
 mock_rembg = MagicMock()
 mock_open_clip = MagicMock()
 mock_torch = MagicMock()
-mock_litellm = MagicMock()
 
 # Configure MagicMock properties to prevent attribute lookup errors
 mock_torch.cuda.is_available.return_value = False
@@ -19,9 +20,79 @@ sys.modules['python_multipart'] = mock_python_multipart
 sys.modules['rembg'] = mock_rembg
 sys.modules['open_clip'] = mock_open_clip
 sys.modules['torch'] = mock_torch
-sys.modules['litellm'] = mock_litellm
 sys.modules['multipart'] = MagicMock()
 
+# Mock PydanticAI modules
+mock_pydantic_ai = MagicMock()
+mock_pydantic_ai_models_google = MagicMock()
+mock_pydantic_ai_messages = MagicMock()
+sys.modules['pydantic_ai'] = mock_pydantic_ai
+sys.modules['pydantic_ai.models'] = MagicMock()
+sys.modules['pydantic_ai.models.google'] = mock_pydantic_ai_models_google
+sys.modules['pydantic_ai.providers'] = MagicMock()
+sys.modules['pydantic_ai.providers.google'] = MagicMock()
+sys.modules['pydantic_ai.messages'] = mock_pydantic_ai_messages
+
+# Create mock Agent class that returns predictable results
+class MockRunResult:
+    def __init__(self, data):
+        self.output = data
+
+class MockStreamedRunResult:
+    def __init__(self, text):
+        self.text = text
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        pass
+
+    async def stream_text(self, delta=False, debounce_by=None):
+        if delta:
+            # Yield words as delta chunks
+            words = self.text.split()
+            for i, word in enumerate(words):
+                # add trailing space for non-last words
+                yield word + (" " if i < len(words) - 1 else "")
+        else:
+            yield self.text
+
+class MockAgent:
+    """A mock PydanticAI Agent that returns predictable results for testing."""
+    def __init__(self, *args, **kwargs):
+        self._system_prompt_fns = []
+        self._tools = []
+        self.result_type = kwargs.get('result_type', str)
+    
+    def system_prompt(self, fn):
+        self._system_prompt_fns.append(fn)
+        return fn
+    
+    def tool(self, fn):
+        self._tools.append(fn)
+        return fn
+    
+    async def run(self, *args, **kwargs):
+        if self.result_type == str:
+            return MockRunResult("Hello! This is Aura, your personal stylist.")
+        else:
+            # For structured output agents, return a mock instance
+            return MockRunResult(self.result_type(
+                name="Mock Autumn Look",
+                item_ids=["c23a6b7d-fa90-4c8d-b03a-c603b55581fe"],
+                ai_rationale="A coordinated minimalist look.",
+            ))
+    
+    def run_stream(self, *args, **kwargs):
+        return MockStreamedRunResult("Hello! This is Aura, your personal stylist.")
+    
+    def run_sync(self, *args, **kwargs):
+        return self.run(*args, **kwargs)
+
+# Patch Agent in pydantic_ai mock
+mock_pydantic_ai.Agent = MockAgent
+mock_pydantic_ai.RunContext = MagicMock()
 
 
 import json
@@ -145,38 +216,22 @@ le.get_open_clip_model = lambda: ("mock_clip_model", "mock_preprocess")
 le.get_tokenizer = lambda: "mock_tokenizer"
 le.generate_text_embedding = lambda text: [0.1] * 512
 
-# Mock async acompletion for litellm
-async def mock_acompletion(*args, **kwargs):
-    is_stream = kwargs.get("stream", False)
-    if is_stream:
-        class MockChunk:
-            def __init__(self, text):
-                class Choice:
-                    def __init__(self, t):
-                        class Delta:
-                            def __init__(self, text_val):
-                                self.content = text_val
-                        self.delta = Delta(t)
-                self.choices = [Choice(text)]
-                
-        async def generator():
-            yield MockChunk("Hello!")
-            yield MockChunk(" This is Aura,")
-            yield MockChunk(" your personal stylist.")
-        return generator()
-    else:
-        class MockResponse:
-            def __init__(self):
-                class Message:
-                    def __init__(self):
-                        self.content = "Hello! This is Aura, your personal stylist."
-                class Choice:
-                    def __init__(self):
-                        self.message = Message()
-                self.choices = [Choice()]
-        return MockResponse()
+# --- MOCKING PYDANTIC AI AGENTS ---
+# Patch the agents with our mock agents that return predictable results
 
-mock_litellm.acompletion = mock_acompletion
+import backend.services.agents as agents_mod
+
+# Create mock agents for the stylist and outfit agents
+mock_stylist = MockAgent(result_type=str)
+mock_outfit = MockAgent()
+
+# Override the actual agents
+agents_mod.stylist_agent = mock_stylist
+agents_mod.outfit_agent = mock_outfit
+
+# Mock memory module
+import backend.services.memory as memory_mod
+memory_mod.should_consolidate = lambda: False
 
 # Mock Starlette Request.form to bypass Starlette multipart parsing in dry runs
 from starlette.requests import Request
@@ -247,6 +302,26 @@ class TestWardrobeAssistantBackend(unittest.TestCase):
         resp_json = response.json()
         self.assertIn("reply", resp_json)
         self.assertEqual(resp_json["reply"], "Hello! This is Aura, your personal stylist.")
+
+    def test_chat_message_stream(self):
+        """Test chat streaming: Verify it returns a text/event-stream with chunks."""
+        payload = {
+            "message": "What should I wear with my grey sweater?",
+            "history": []
+        }
+        
+        response = self.client.post("/api/chat/stream", json=payload)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.headers["content-type"].startswith("text/event-stream"))
+        
+        events = []
+        for line in response.iter_lines():
+            if line.startswith("data: "):
+                event_data = json.loads(line[6:])
+                events.append(event_data)
+        
+        combined = "".join(e["chunk"] for e in events if "chunk" in e)
+        self.assertEqual(combined, "Hello! This is Aura, your personal stylist.")
 
     def test_outfit_worn_logging(self):
         """Test outfit wear logging: Verify it increments worn counters successfully."""
