@@ -40,6 +40,13 @@ app.include_router(items.router)
 app.include_router(chat.router)
 app.include_router(outfits.router)
 
+# Mount frontend production build static files if present
+frontend_dist = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "dist"))
+if os.path.exists(frontend_dist):
+    app.mount("/", StaticFiles(directory=frontend_dist, html=True), name="frontend")
+else:
+    logger.warning("Production frontend build directory 'frontend/dist' not found. Ensure frontend is built or dev server is running.")
+
 @app.get("/health")
 def health_check():
     return {"status": "healthy", "service": "wardrobe-assistant-backend"}
@@ -60,6 +67,14 @@ class BackgroundServer(threading.Thread):
     def stop(self):
         logger.info("Stopping background Uvicorn server...")
         self.server.should_exit = True
+
+def is_port_open(host: str, port: int) -> bool:
+    import socket
+    try:
+        with socket.create_connection((host, port), timeout=0.3):
+            return True
+    except OSError:
+        return False
 
 def start_desktop_app():
     # Lazy-load webview to prevent native GUI library initialization/imports in headless server mode
@@ -84,9 +99,13 @@ def start_desktop_app():
     time.sleep(1.0)
     
     # 3. Create a native resizable desktop window pointing to the local Vite dev server
-    # (or compiled static files index.html in production)
-    dev_url = "http://localhost:5173"
-    logger.info(f"Launching pywebview desktop window pointing to: {dev_url}")
+    # (or fallback to compiled static files served via FastAPI)
+    if is_port_open("127.0.0.1", 5173):
+        dev_url = "http://127.0.0.1:5173"
+        logger.info(f"Vite dev server detected. Launching pywebview pointing to dev: {dev_url}")
+    else:
+        dev_url = "http://127.0.0.1:8000"
+        logger.info(f"Vite dev server not found on port 5173. Launching pywebview pointing to FastAPI production server: {dev_url}")
     
     window = webview.create_window(
         title="👗 wardrobeAssistant",
