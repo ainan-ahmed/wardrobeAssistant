@@ -95,9 +95,7 @@ export const AssistantTab: React.FC = () => {
       {/* Input area */}
       <Box
         p="md"
-        style={{
-          borderTop: '1px solid var(--mantine-color-default-border)',
-        }}
+        className="stylist-chat-input-area"
       >
         <Group gap="xs">
           <TextInput

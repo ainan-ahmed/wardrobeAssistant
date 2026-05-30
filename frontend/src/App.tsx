@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MantineProvider, createTheme, Container, Tabs } from '@mantine/core';
 import { FileWithPath } from '@mantine/dropzone';
-import { IconHome, IconHanger, IconMessageCircle } from '@tabler/icons-react';
+import { IconHome, IconHanger, IconMessageCircle, IconShirt } from '@tabler/icons-react';
 import axios from 'axios';
 
 // Domain imports
@@ -14,6 +14,7 @@ import { AppHeader } from './shared/components/AppHeader';
 import { HomeTab } from './pages/HomeTab';
 import { WardrobeTab } from './pages/WardrobeTab';
 import { AssistantTab } from './pages/AssistantTab';
+import { OutfitsTab } from './pages/OutfitsTab';
 
 // --- ELITE CUSTOM THEME CONFIGURATION ---
 const theme = createTheme({
@@ -134,6 +135,9 @@ function MainApp() {
           <Tabs.Tab value="wardrobe" leftSection={<IconHanger size={16} />}>
             Wardrobe
           </Tabs.Tab>
+          <Tabs.Tab value="outfits" leftSection={<IconShirt size={16} />}>
+            Looks
+          </Tabs.Tab>
           <Tabs.Tab value="assistant" leftSection={<IconMessageCircle size={16} />}>
             Stylist
           </Tabs.Tab>
@@ -156,7 +160,12 @@ function MainApp() {
             onSearchChange={setSearchQuery}
             onCategoryChange={handleCategoryChange}
             onDelete={handleDelete}
+            onUpdate={fetchItems}
           />
+        </Tabs.Panel>
+
+        <Tabs.Panel value="outfits">
+          <OutfitsTab wardrobeItems={items} />
         </Tabs.Panel>
 
         <Tabs.Panel value="assistant">

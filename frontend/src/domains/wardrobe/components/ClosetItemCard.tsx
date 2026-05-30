@@ -1,30 +1,32 @@
 import React from 'react';
-import { Card, Text, Image, Badge, Loader, ActionIcon, Flex, Stack, Group, rem } from '@mantine/core';
+import { Card, Text, Image, Badge, Loader, ActionIcon, Flex, Stack, Group } from '@mantine/core';
 import { WardrobeItem } from '../types';
 
 interface ClosetItemCardProps {
   item: WardrobeItem;
   onDelete: (e: React.MouseEvent, id: string) => void;
+  onClick?: (item: WardrobeItem) => void;
 }
 
-export const ClosetItemCard: React.FC<ClosetItemCardProps> = ({ item, onDelete }) => {
+export const ClosetItemCard: React.FC<ClosetItemCardProps> = ({ item, onDelete, onClick }) => {
   return (
     <Card 
       p="md" 
       radius="md" 
-      className="closet-item-card"
+      className={`closet-item-card ${onClick ? 'cursor-pointer' : ''}`}
+      onClick={() => onClick?.(item)}
     >
       
       {/* Dynamic Status States */}
       {item.category === 'processing' ? (
-        <Flex justify="center" align="center" style={{ minHeight: rem(160), flexDirection: 'column' }}>
+        <Flex className="loader-container">
           <Loader size="sm" color="amber" mb="xs" />
-          <Text size="xs" c="amber" fw={500} style={{ letterSpacing: '0.05em' }}>Isolating...</Text>
+          <Text size="xs" c="amber" fw={500} className="meta-label-upper">Isolating...</Text>
         </Flex>
       ) : item.category === 'failed' ? (
-        <Flex justify="center" align="center" style={{ minHeight: rem(160), flexDirection: 'column', padding: rem(10) }}>
-          <Text size="xs" color="red" fw={600} style={{ textAlign: 'center' }}>Ingestion failed</Text>
-          <Text size="10px" c="dimmed" mt={4} style={{ textAlign: 'center' }}>Check logs</Text>
+        <Flex className="loader-container" p="sm">
+          <Text size="xs" color="red" fw={600} ta="center">Ingestion failed</Text>
+          <Text size="10px" c="dimmed" mt={4} ta="center">Check logs</Text>
         </Flex>
       ) : (
         <>
@@ -35,13 +37,7 @@ export const ClosetItemCard: React.FC<ClosetItemCardProps> = ({ item, onDelete }
             color="red"
             size="sm"
             radius="99px"
-            style={{
-              position: 'absolute',
-              top: rem(-8),
-              right: rem(-8),
-              zIndex: 10,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-            }}
+            className="card-trash-button"
           >
             🗑️
           </ActionIcon>
@@ -49,30 +45,18 @@ export const ClosetItemCard: React.FC<ClosetItemCardProps> = ({ item, onDelete }
           {/* Centered Transparent Cutout Container */}
           <Card.Section 
             p="md" 
-            style={{ 
-              backgroundColor: 'var(--panel-cream)', 
-              borderRadius: 'var(--mantine-radius-md)',
-              display: 'flex', 
-              justifyContent: 'center',
-              alignItems: 'center',
-              minHeight: rem(160)
-            }}
+            className="card-image-box"
           >
             <Image
               src={`/${item.processed_image_path}`}
               alt={item.ai_description || 'Garment Cutout'}
               fallbackSrc="https://placehold.co/150"
-              className="isolated-cutout"
-              style={{
-                maxHeight: rem(140),
-                objectFit: 'contain',
-                transition: 'transform 0.4s ease',
-              }}
+              className="isolated-cutout card-image-file"
             />
           </Card.Section>
 
           <Stack gap={3} mt="sm">
-            <Text size="xs" fw={700} style={{ letterSpacing: '0.02em', textTransform: 'uppercase' }} truncate="end">
+            <Text size="xs" fw={700} className="meta-label-upper" truncate="end">
               {item.brand || 'Minimalist Brand'}
             </Text>
             <Text size="xs" c="dimmed" truncate="end">
@@ -81,7 +65,7 @@ export const ClosetItemCard: React.FC<ClosetItemCardProps> = ({ item, onDelete }
             <Flex justify="space-between" align="center" mt={4}>
               <Group gap={4}>
                 {item.colors.slice(0, 1).map((col, idx) => (
-                  <Badge key={idx} variant="outline" size="xs" color="amber" style={{ fontSize: '10px' }}>
+                  <Badge key={idx} variant="outline" size="xs" color="amber" className="text-10">
                     {col}
                   </Badge>
                 ))}

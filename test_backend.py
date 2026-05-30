@@ -147,21 +147,34 @@ le.generate_text_embedding = lambda text: [0.1] * 512
 
 # Mock async acompletion for litellm
 async def mock_acompletion(*args, **kwargs):
-    class MockChunk:
-        def __init__(self, text):
-            class Choice:
-                def __init__(self, t):
-                    class Delta:
-                        def __init__(self, text_val):
-                            self.content = text_val
-                    self.delta = Delta(t)
-            self.choices = [Choice(text)]
-            
-    async def generator():
-        yield MockChunk("Hello!")
-        yield MockChunk(" This is Aura,")
-        yield MockChunk(" your personal stylist.")
-    return generator()
+    is_stream = kwargs.get("stream", False)
+    if is_stream:
+        class MockChunk:
+            def __init__(self, text):
+                class Choice:
+                    def __init__(self, t):
+                        class Delta:
+                            def __init__(self, text_val):
+                                self.content = text_val
+                        self.delta = Delta(t)
+                self.choices = [Choice(text)]
+                
+        async def generator():
+            yield MockChunk("Hello!")
+            yield MockChunk(" This is Aura,")
+            yield MockChunk(" your personal stylist.")
+        return generator()
+    else:
+        class MockResponse:
+            def __init__(self):
+                class Message:
+                    def __init__(self):
+                        self.content = "Hello! This is Aura, your personal stylist."
+                class Choice:
+                    def __init__(self):
+                        self.message = Message()
+                self.choices = [Choice()]
+        return MockResponse()
 
 mock_litellm.acompletion = mock_acompletion
 
@@ -220,8 +233,8 @@ class TestWardrobeAssistantBackend(unittest.TestCase):
         self.assertEqual(len(resp_json), 1)
         self.assertEqual(resp_json[0]["category"], "tops")
 
-    def test_sse_chat_message_streaming(self):
-        """Test conversation stream: Verify it streams chat replies using Server-Sent Events (SSE)."""
+    def test_chat_message_json(self):
+        """Test chat: Verify it returns a standard JSON response with the stylist's reply."""
         payload = {
             "message": "What should I wear with my grey sweater?",
             "history": []
@@ -230,23 +243,10 @@ class TestWardrobeAssistantBackend(unittest.TestCase):
         # Test HTTP POST connection
         response = self.client.post("/api/chat/message", json=payload)
         self.assertEqual(response.status_code, 200)
-        self.assertTrue(response.headers["content-type"].startswith("text/event-stream"))
-        
-        # Verify streamed response lines
-        lines = response.text.split("\n\n")
-        parsed_events = []
-        for line in lines:
-            if line.startswith("data: "):
-                event_data = line[6:]
-                if event_data == "[DONE]":
-                    parsed_events.append("[DONE]")
-                else:
-                    parsed_events.append(json.loads(event_data))
-                    
-        # Check that we received chunks and the completion token
-        self.assertEqual(parsed_events[-1], "[DONE]")
-        self.assertEqual(parsed_events[0]["text"], "Hello!")
-        self.assertEqual(parsed_events[1]["text"], " This is Aura,")
+        self.assertTrue(response.headers["content-type"].startswith("application/json"))
+        resp_json = response.json()
+        self.assertIn("reply", resp_json)
+        self.assertEqual(resp_json["reply"], "Hello! This is Aura, your personal stylist.")
 
     def test_outfit_worn_logging(self):
         """Test outfit wear logging: Verify it increments worn counters successfully."""

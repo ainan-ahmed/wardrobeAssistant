@@ -9,11 +9,12 @@ interface WardrobeTabProps {
   onSearchChange: (val: string) => void;
   onCategoryChange: (cat: string) => void;
   onDelete: (e: React.MouseEvent, id: string) => void;
+  onUpdate?: () => void;
 }
 
 export const WardrobeTab: React.FC<WardrobeTabProps> = ({
   items, searchQuery, activeCategory,
-  onSearchChange, onCategoryChange, onDelete,
+  onSearchChange, onCategoryChange, onDelete, onUpdate,
 }) => {
   return (
     <ClosetInventory
@@ -23,6 +24,7 @@ export const WardrobeTab: React.FC<WardrobeTabProps> = ({
       activeCategory={activeCategory}
       onCategoryChange={onCategoryChange}
       onDelete={onDelete}
+      onUpdate={onUpdate}
     />
   );
 };

@@ -1,6 +1,7 @@
-import React from 'react';
-import { Card, Text, TextInput, SimpleGrid, Flex, Group, Badge, rem } from '@mantine/core';
+import React, { useState } from 'react';
+import { Card, Text, TextInput, SimpleGrid, Flex, Group, Badge } from '@mantine/core';
 import { ClosetItemCard } from './ClosetItemCard';
+import { ClosetItemDrawer } from './ClosetItemDrawer';
 import { WardrobeItem } from '../types';
 
 interface ClosetInventoryProps {
@@ -10,6 +11,7 @@ interface ClosetInventoryProps {
   activeCategory: string;
   onCategoryChange: (cat: string) => void;
   onDelete: (e: React.MouseEvent, id: string) => void;
+  onUpdate?: () => void;
 }
 
 export const ClosetInventory: React.FC<ClosetInventoryProps> = ({
@@ -18,10 +20,24 @@ export const ClosetInventory: React.FC<ClosetInventoryProps> = ({
   onSearchChange,
   activeCategory,
   onCategoryChange,
-  onDelete
+  onDelete,
+  onUpdate
 }) => {
+  const [selectedItem, setSelectedItem] = useState<WardrobeItem | null>(null);
+  const [drawerOpened, setDrawerOpened] = useState(false);
+
+  const handleCardClick = (item: WardrobeItem) => {
+    setSelectedItem(item);
+    setDrawerOpened(true);
+  };
+
+  const handleDrawerClose = () => {
+    setDrawerOpened(false);
+    setSelectedItem(null);
+  };
+
   return (
-    <Card className="bento-card" p="xl" radius="lg" style={{ minHeight: '100%' }}>
+    <Card className="bento-card full-height-card" p="xl" radius="lg">
       {/* CLOSET HEADER & SEARCH */}
       <Flex justify="space-between" align="center" direction={{ base: 'column', sm: 'row' }} gap="md" mb="lg">
         <Text className="editorial-header" size="xs" c="dimmed" fw={700}>
@@ -33,7 +49,7 @@ export const ClosetInventory: React.FC<ClosetInventoryProps> = ({
           placeholder="🔍 Search semantically (e.g. 'cozy warm layers')"
           value={searchQuery}
           onChange={(event) => onSearchChange(event.currentTarget.value)}
-          style={{ width: rem(300) }}
+          className="elegant-search-wrapper"
           classNames={{ input: 'elegant-search-input' }}
         />
       </Flex>
@@ -47,10 +63,7 @@ export const ClosetInventory: React.FC<ClosetInventoryProps> = ({
             variant={activeCategory === cat ? 'filled' : 'outline'}
             color="amber"
             radius="99px"
-            className="elegant-inventory-pill"
-            style={{
-              border: activeCategory === cat ? 'none' : undefined
-            }}
+            className={activeCategory === cat ? 'elegant-inventory-pill elegant-inventory-pill-active' : 'elegant-inventory-pill'}
           >
             {cat}
           </Badge>
@@ -63,9 +76,9 @@ export const ClosetInventory: React.FC<ClosetInventoryProps> = ({
           justify="center" 
           align="center" 
           direction="column" 
-          style={{ minHeight: 350 }}
+          className="empty-state-section"
         >
-          <Text size="xl" className="editorial-title" c="dimmed" style={{ fontSize: rem(28) }}>
+          <Text size="xl" className="editorial-title empty-state-title" c="dimmed">
             Your digital boutique is empty.
           </Text>
           <Text size="xs" c="dimmed" mt={8}>
@@ -79,10 +92,20 @@ export const ClosetInventory: React.FC<ClosetInventoryProps> = ({
               key={item.id} 
               item={item} 
               onDelete={onDelete} 
+              onClick={handleCardClick}
             />
           ))}
         </SimpleGrid>
       )}
+
+      {/* Item Profile Details Slide-out Drawer */}
+      <ClosetItemDrawer
+        item={selectedItem}
+        opened={drawerOpened}
+        onClose={handleDrawerClose}
+        onUpdate={onUpdate || (() => {})}
+        onDelete={onDelete}
+      />
     </Card>
   );
 };
