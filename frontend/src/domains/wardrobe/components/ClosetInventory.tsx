@@ -34,18 +34,7 @@ export const ClosetInventory: React.FC<ClosetInventoryProps> = ({
           value={searchQuery}
           onChange={(event) => onSearchChange(event.currentTarget.value)}
           style={{ width: rem(300) }}
-          styles={{
-            input: {
-              borderRadius: rem(99),
-              border: '1px solid rgba(197, 138, 62, 0.25)',
-              backgroundColor: 'rgba(255, 255, 255, 0.4)',
-              paddingLeft: rem(35),
-              '&:focus': {
-                borderColor: 'var(--amber-primary)',
-                boxShadow: '0 0 0 1px var(--amber-primary)'
-              }
-            }
-          }}
+          classNames={{ input: 'elegant-search-input' }}
         />
       </Flex>
 
