@@ -2,12 +2,11 @@ import json
 import logging
 from typing import List, Dict, Optional
 from fastapi import APIRouter, Depends, HTTPException, Body
-from fastapi.responses import StreamingResponse
 from sqlmodel import Session, select
 
 from backend.database import get_session
 from backend.models import ChatMessage
-from backend.services.llm_engine import handle_chat_stream
+from backend.services.llm_engine import handle_chat_completion
 
 logger = logging.getLogger("chat_router")
 router = APIRouter(prefix="/api/chat", tags=["chat"])
@@ -22,7 +21,7 @@ async def send_message(
     db: Session = Depends(get_session)
 ):
     """
-    Posts a message to the stylist assistant and returns a live Server-Sent Events (SSE) stream.
+    Posts a message to the stylist assistant Aura (powered by Gemini) and returns a JSON response.
     Payload schema:
     {
       "message": "User query here",
@@ -43,41 +42,19 @@ async def send_message(
     except Exception as e:
         logger.warning(f"Failed to persist user message in DB history: {str(e)}")
 
-    # 2. Define the generator that yields SSE events
-    async def sse_event_generator():
-        full_response = []
-        try:
-            async for text_chunk in handle_chat_stream(user_message, conversation_history, db):
-                full_response.append(text_chunk)
-                # Send text chunk formatted as SSE
-                yield f"data: {json.dumps({'text': text_chunk})}\n\n"
-                
-            # Stream completed successfully - save full response to DB
-            full_response_text = "".join(full_response)
-            if full_response_text:
-                try:
-                    assistant_msg_db = ChatMessage(role="assistant", content=full_response_text)
-                    db.add(assistant_msg_db)
-                    db.commit()
-                except Exception as e:
-                    logger.warning(f"Failed to persist assistant response in DB history: {str(e)}")
-                    
-        except Exception as e:
-            logger.error(f"Error in SSE generator stream: {str(e)}")
-            yield f"data: {json.dumps({'error': str(e)})}\n\n"
-            
-        yield "data: [DONE]\n\n"
+    # 2. Generate fashion assistant response via Gemini text context completion (no CLIP model used)
+    reply_text = await handle_chat_completion(user_message, conversation_history, db)
 
-    # 3. Return streaming response with correct SSE header
-    return StreamingResponse(
-        sse_event_generator(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no"  # Prevents Nginx/proxy buffering
-        }
-    )
+    # 3. Save assistant response to database history
+    if reply_text:
+        try:
+            assistant_msg_db = ChatMessage(role="assistant", content=reply_text)
+            db.add(assistant_msg_db)
+            db.commit()
+        except Exception as e:
+            logger.warning(f"Failed to persist assistant response in DB history: {str(e)}")
+
+    return {"reply": reply_text}
 
 @router.get("/history", response_model=List[ChatMessage])
 async def get_chat_history(db: Session = Depends(get_session)):
