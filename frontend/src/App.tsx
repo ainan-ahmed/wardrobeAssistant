@@ -144,12 +144,7 @@ function MainApp() {
             items={items}
             loading={loading}
             uploadError={uploadError}
-            searchQuery={searchQuery}
-            activeCategory={activeCategory}
             onUpload={handleUpload}
-            onSearchChange={setSearchQuery}
-            onCategoryChange={handleCategoryChange}
-            onDelete={handleDelete}
           />
         </Tabs.Panel>
 
