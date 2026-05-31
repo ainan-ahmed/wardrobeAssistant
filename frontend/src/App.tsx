@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MantineProvider, createTheme, Container, Tabs } from '@mantine/core';
 import { FileWithPath } from '@mantine/dropzone';
-import { IconHome, IconHanger, IconMessageCircle, IconShirt } from '@tabler/icons-react';
+import { IconHome, IconHanger, IconMessageCircle, IconShirt, IconChartPie } from '@tabler/icons-react';
 import axios from 'axios';
 
 // Domain imports
@@ -15,6 +15,7 @@ import { HomeTab } from './pages/HomeTab';
 import { WardrobeTab } from './pages/WardrobeTab';
 import { AssistantTab } from './pages/AssistantTab';
 import { OutfitsTab } from './pages/OutfitsTab';
+import { AnalyticsTab } from './pages/AnalyticsTab';
 
 // --- ELITE CUSTOM THEME CONFIGURATION ---
 const theme = createTheme({
@@ -138,6 +139,9 @@ function MainApp() {
           <Tabs.Tab value="outfits" leftSection={<IconShirt size={16} />}>
             Looks
           </Tabs.Tab>
+          <Tabs.Tab value="analytics" leftSection={<IconChartPie size={16} />}>
+            Analytics
+          </Tabs.Tab>
           <Tabs.Tab value="assistant" leftSection={<IconMessageCircle size={16} />}>
             Stylist
           </Tabs.Tab>
@@ -166,6 +170,10 @@ function MainApp() {
 
         <Tabs.Panel value="outfits">
           <OutfitsTab wardrobeItems={items} />
+        </Tabs.Panel>
+
+        <Tabs.Panel value="analytics">
+          <AnalyticsTab wardrobeItems={items} />
         </Tabs.Panel>
 
         <Tabs.Panel value="assistant">

@@ -83,6 +83,96 @@ async def background_ingestion_worker(
             session.add(db_item)
             session.commit()
 
+@router.post("/seed")
+async def seed_items(db: Session = Depends(get_session)):
+    """Seeds the database with 5 beautifully designed mock items for testing."""
+    # Delete existing items
+    for item in db.exec(select(WardrobeItem)).all():
+        db.delete(item)
+    db.commit()
+
+    # Insert mock items
+    unit_vector = [0.0] * 512
+    unit_vector[0] = 1.0
+
+    items = [
+        WardrobeItem(
+            id=uuid.uuid4(),
+            original_image_path="backend/data/originals/mock_top.jpg",
+            processed_image_path="backend/data/processed/mock_top.png",
+            category="tops",
+            subcategory="sweater",
+            colors=["Navy", "White"],
+            style_tags=["cozy", "minimalist"],
+            ai_description="Premium merino wool navy sweater with white accents",
+            brand="Zara",
+            times_worn=12,
+            is_active=True,
+            vector_embedding=unit_vector
+        ),
+        WardrobeItem(
+            id=uuid.uuid4(),
+            original_image_path="backend/data/originals/mock_bottom.jpg",
+            processed_image_path="backend/data/processed/mock_bottom.png",
+            category="bottoms",
+            subcategory="jeans",
+            colors=["Blue", "Indigo"],
+            style_tags=["denim", "classic"],
+            ai_description="Classic indigo blue straight-fit jeans",
+            brand="Levi's",
+            times_worn=8,
+            is_active=True,
+            vector_embedding=unit_vector
+        ),
+        WardrobeItem(
+            id=uuid.uuid4(),
+            original_image_path="backend/data/originals/mock_shoes.jpg",
+            processed_image_path="backend/data/processed/mock_shoes.png",
+            category="shoes",
+            subcategory="sneakers",
+            colors=["White", "Grey"],
+            style_tags=["athleisure", "sporty"],
+            ai_description="Minimalist white leather sneakers with grey stripe",
+            brand="Nike",
+            times_worn=22,
+            is_active=True,
+            vector_embedding=unit_vector
+        ),
+        WardrobeItem(
+            id=uuid.uuid4(),
+            original_image_path="backend/data/originals/mock_jacket.jpg",
+            processed_image_path="backend/data/processed/mock_jacket.png",
+            category="outerwear",
+            subcategory="jacket",
+            colors=["Black"],
+            style_tags=["techwear", "waterproof"],
+            ai_description="Black lightweight waterproof rain jacket",
+            brand="Patagonia",
+            times_worn=3,
+            is_active=True,
+            vector_embedding=unit_vector
+        ),
+        WardrobeItem(
+            id=uuid.uuid4(),
+            original_image_path="backend/data/originals/mock_shirt.jpg",
+            processed_image_path="backend/data/processed/mock_shirt.png",
+            category="tops",
+            subcategory="shirt",
+            colors=["Pink"],
+            style_tags=["formal", "summer"],
+            ai_description="Light pink linen summer button-down shirt",
+            brand="Ralph Lauren",
+            times_worn=1,
+            is_active=True,
+            vector_embedding=unit_vector
+        )
+    ]
+
+    for item in items:
+        db.add(item)
+    db.commit()
+    return {"message": "Database seeded successfully!"}
+
 @router.post("/upload", status_code=202)
 async def upload_item(
     background_tasks: BackgroundTasks,

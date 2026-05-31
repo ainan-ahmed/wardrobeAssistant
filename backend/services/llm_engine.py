@@ -59,15 +59,26 @@ def retrieve_wardrobe_context(user_query: str, db_session: Session, limit: int =
         # 1. Convert user text query into a vector
         query_vector = generate_text_embedding(user_query)
         
+
         # 2. Query PostgreSQL sorted by pgvector's cosine distance operator
-        statement = (
-            select(WardrobeItem)
-            .where(WardrobeItem.is_active == True)
-            .order_by(WardrobeItem.vector_embedding.cosine_distance(query_vector))
-            .limit(limit)
-        )
-        
-        results = db_session.exec(statement).all()
+        try:
+            statement = (
+                select(WardrobeItem)
+                .where(WardrobeItem.is_active == True)
+                .order_by(WardrobeItem.vector_embedding.cosine_distance(query_vector))
+                .limit(limit)
+            )
+            results = db_session.exec(statement).all()
+        except Exception as vec_err:
+            logger.warning(f"Vector search failed: {vec_err}. Falling back to relational newest first.")
+            statement = (
+                select(WardrobeItem)
+                .where(WardrobeItem.is_active == True)
+                .order_by(WardrobeItem.created_at.desc())
+                .limit(limit)
+            )
+            results = db_session.exec(statement).all()
+
         logger.info(f"Retrieved {len(results)} items from database.")
         
         # 3. Format as simplified metadata for LLM ingestion
